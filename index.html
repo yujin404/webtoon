@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>웹툰 변환기</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #111;
+  --paper: #fafaf7;
+  --panel: #fff;
+  --accent: #ff4d6d;
+  --accent2: #ffccd5;
+  --gold: #ffd166;
+  --line: #e8e4dc;
+  --muted: #999;
+  --radius: 14px;
+  --shadow: 4px 4px 0 var(--ink);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(circle, #e0d8ce 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap {
+  position: relative; z-index: 1;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 5rem;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 3px solid var(--ink);
+}
+.logo {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 1rem;
+  background: var(--ink);
+  color: var(--gold);
+  padding: 0.45rem 0.9rem;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+}
+.header-text h1 {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 1.9rem;
+  letter-spacing: 2px;
+  line-height: 1.1;
+}
+.header-text h1 em { color: var(--accent); font-style: normal; }
+.header-text p { font-size: 0.82rem; color: var(--muted); margin-top: 0.25rem; }
+
+/* API BAR */
+.api-bar {
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 1.8rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.api-bar .field { flex: 1; min-width: 220px; }
+.api-bar label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.4rem;
+}
+.api-bar input {
+  width: 100%;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 0.58rem 0.8rem;
+  font-size: 0.88rem;
+  background: var(--paper);
+  outline: none;
+  font-family: monospace;
+  transition: box-shadow 0.15s;
+}
+.api-bar input:focus { box-shadow: 3px 3px 0 var(--accent); }
+
+.api-guide {
+  background: var(--accent2);
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  font-size: 0.8rem;
+  line-height: 1.8;
+  flex: 1;
+  min-width: 200px;
+}
+.api-guide a { color: var(--accent); font-weight: 700; }
+
+/* STYLE CHIPS */
+.style-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.8rem;
+  align-items: center;
+}
+.style-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.chip {
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 0.32rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--paper);
+  user-select: none;
+}
+.chip:hover { background: var(--accent2); }
+.chip.active { background: var(--ink); color: #fff; box-shadow: 2px 2px 0 var(--accent); }
+
+/* PANELS */
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 620px) {
+  .panels { grid-template-columns: 1fr; }
+  .header-text h1 { font-size: 1.4rem; }
+}
+
+.panel {
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: rise 0.4s ease both;
+}
+.panel:nth-child(2) { animation-delay: 0.1s; }
+@keyframes rise { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+
+.panel-head {
+  background: var(--ink);
+  color: #fff;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  padding: 0.55rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.pip { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.pip-yellow { background: var(--gold); }
+.pip-pink   { background: var(--accent); }
+
+.panel-body {
+  flex: 1;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  position: relative;
+}
+
+#drop-zone {
+  width: 100%; height: 100%;
+  min-height: 280px;
+  border: 2.5px dashed #ccc;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  padding: 2rem;
+}
+#drop-zone:hover, #drop-zone.over {
+  border-color: var(--accent);
+  background: #fff5f7;
+}
+.drop-icon-box {
+  width: 58px; height: 58px;
+  background: var(--gold);
+  border: 2.5px solid var(--ink);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.7rem;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.drop-title { font-weight: 700; font-size: 0.95rem; }
+.drop-sub   { font-size: 0.78rem; color: var(--muted); }
+.btn-browse {
+  background: var(--ink); color: #fff;
+  border: none; padding: 0.48rem 1.2rem;
+  border-radius: 6px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 700; font-size: 0.82rem;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--accent);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-browse:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--accent); }
+#file-input { display: none; }
+
+#preview-img, #result-img {
+  max-width: 100%; max-height: 300px;
+  object-fit: contain;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  display: none;
+}
+
+.result-empty {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 0.7rem;
+  color: var(--muted); text-align: center; padding: 2rem;
+}
+.result-empty .big { font-size: 2.8rem; opacity: 0.25; line-height: 1; }
+.result-empty p { font-size: 0.82rem; line-height: 1.6; }
+
+/* STATUS / ERROR */
+.status-box {
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  padding: 0.9rem 1.2rem;
+  display: none; align-items: center; gap: 0.75rem;
+  margin-bottom: 1rem;
+  box-shadow: 2px 2px 0 var(--ink);
+  font-size: 0.88rem; font-weight: 500;
+}
+.status-box.on { display: flex; }
+.spinner {
+  width: 20px; height: 20px;
+  border: 3px solid #eee; border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-rail {
+  flex: 1; height: 5px; background: #eee;
+  border-radius: 3px; overflow: hidden; border: 1px solid #ddd;
+}
+.progress-fill {
+  height: 100%; background: var(--accent);
+  width: 0%; transition: width 0.5s ease; border-radius: 3px;
+}
+
+.error-box {
+  background: #fff0f2; border: 2px solid var(--accent);
+  border-radius: 10px; padding: 0.9rem 1.2rem;
+  display: none; gap: 0.6rem; margin-bottom: 1rem;
+  font-size: 0.85rem; color: #c00; line-height: 1.6;
+}
+.error-box.on { display: flex; }
+
+/* ACTIONS */
+.actions {
+  display: flex; gap: 1rem;
+  justify-content: center; flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+.btn-main {
+  background: var(--accent); color: #fff;
+  border: 2.5px solid var(--ink);
+  padding: 0.85rem 2.4rem;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 1.05rem; letter-spacing: 2px;
+  cursor: pointer; border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-main:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--ink); }
+.btn-main:active { transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
+.btn-main:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: var(--shadow); }
+
+.btn-dl {
+  background: var(--gold); color: var(--ink);
+  border: 2.5px solid var(--ink);
+  padding: 0.85rem 1.8rem;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 1rem; letter-spacing: 2px;
+  cursor: pointer; border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: transform 0.1s, box-shadow 0.1s;
+  text-decoration: none; display: none;
+  align-items: center; gap: 0.4rem;
+}
+.btn-dl.on { display: flex; }
+.btn-dl:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--ink); }
+
+.tip {
+  background: #fffbea; border: 2px solid var(--ink);
+  border-left: 5px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  font-size: 0.82rem; line-height: 1.8; color: #444;
+}
+.tip strong { color: var(--ink); }
+.tip a { color: var(--accent); font-weight: 700; }
+
+footer {
+  border-top: 2px solid var(--ink);
+  margin-top: 2.5rem; padding-top: 1.2rem;
+  font-size: 0.75rem; color: var(--muted);
+  text-align: center; line-height: 1.9;
+}
+footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">TOON</div>
+    <div class="header-text">
+      <h1>웹툰 <em>변환기</em></h1>
+      <p>실사 사진 → 웹툰 일러스트 에셋 · Google Gemini AI</p>
+    </div>
+  </header>
+
+  <div class="api-bar">
+    <div class="field">
+      <label>Google Gemini API Key</label>
+      <input type="password" id="api-key" placeholder="AIzaSy..." autocomplete="off">
+    </div>
+    <div class="api-guide">
+      <strong>🔑 API 키 발급 (무료 · 1분)</strong><br>
+      ① <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> 접속<br>
+      ② <strong>Create API Key</strong> 클릭 → 복사<br>
+      ③ 여기 입력란에 붙여넣기 (채팅창 말고요! 😊)
+    </div>
+  </div>
+
+  <div class="style-row">
+    <span class="style-label">스타일</span>
+    <div class="chip active" data-s="webtoon">🌸 웹툰</div>
+    <div class="chip" data-s="anime">✨ 애니메이션</div>
+    <div class="chip" data-s="manhwa">💝 순정만화</div>
+    <div class="chip" data-s="action">⚡ 액션/소년</div>
+    <div class="chip" data-s="pastel">🎨 파스텔</div>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <div class="panel-head"><div class="pip pip-yellow"></div> 원본 사진</div>
+      <div class="panel-body">
+        <div id="drop-zone">
+          <div class="drop-icon-box">📷</div>
+          <p class="drop-title">이미지를 여기에 드래그</p>
+          <p class="drop-sub">JPG · PNG · WEBP · 최대 10MB</p>
+          <button class="btn-browse" onclick="document.getElementById('file-input').click()">파일 선택</button>
+        </div>
+        <input type="file" id="file-input" accept="image/*">
+        <img id="preview-img" alt="원본">
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><div class="pip pip-pink"></div> 웹툰 결과</div>
+      <div class="panel-body">
+        <div class="result-empty" id="result-empty">
+          <div class="big">🎨</div>
+          <p>변환 버튼을 누르면<br>웹툰 스타일로<br>변환됩니다</p>
+        </div>
+        <img id="result-img" alt="웹툰 결과">
+      </div>
+    </div>
+  </div>
+
+  <div class="status-box" id="status-box">
+    <div class="spinner"></div>
+    <span id="status-text">처리 중...</span>
+    <div class="progress-rail"><div class="progress-fill" id="prog"></div></div>
+  </div>
+
+  <div class="error-box" id="error-box">
+    <span>⚠️</span><span id="error-text"></span>
+  </div>
+
+  <div class="actions">
+    <button class="btn-main" id="convert-btn" onclick="convert()" disabled>🎨 웹툰으로 변환</button>
+    <a class="btn-dl" id="dl-btn" download="webtoon.png">⬇ 결과 저장</a>
+  </div>
+
+  <div class="tip">
+    <strong>💡 사용 안내</strong><br>
+    • <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a>에서 무료 API 키 발급 후 위 입력란에 넣어주세요.<br>
+    • 사진을 드래그하거나 파일 선택 후 <strong>웹툰으로 변환</strong> 버튼을 클릭하세요.<br>
+    • Gemini가 사진을 분석해 웹툰 스타일 일러스트로 새로 그려줍니다.<br>
+    • 결과물은 <strong>흰색 배경의 웹툰 에셋</strong>으로 바로 사용 가능합니다.
+  </div>
+
+  <footer>
+    Powered by <a href="https://ai.google.dev" target="_blank">Google Gemini API</a> (gemini-2.0-flash-exp)<br>
+    업로드 이미지는 Google 서버에서만 처리되며 본 도구에 저장되지 않습니다.
+  </footer>
+
+</div>
+
+<script>
+const STYLE_PROMPTS = {
+  webtoon: "Convert this image into a Korean webtoon illustration style. Use clean bold black outlines, bright cel shading with flat vivid colors, white background, crisp lineart. Make it look like a professional Korean webtoon asset. No gradients, no photo elements, pure illustration.",
+  anime:   "Convert this image into an anime illustration style. Clean smooth lineart, cel shading, vibrant saturated colors, white background. Studio quality anime art style.",
+  manhwa:  "Convert this image into a Korean manhwa shoujo style illustration. Soft pastel colors, delicate clean outlines, sparkle effects, white background. Romantic webtoon aesthetic.",
+  action:  "Convert this image into a shonen manga action style illustration. Bold thick black outlines, high contrast cel shading, dynamic composition, white background. Strong energetic manga style.",
+  pastel:  "Convert this image into a soft pastel webtoon illustration style. Gentle dreamy colors, soft outlines, cute Korean webtoon aesthetic, pure white background. Watercolor-like soft coloring."
+};
+
+let imgB64 = null;
+let imgMime = 'image/jpeg';
+let selectedStyle = 'webtoon';
+
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    selectedStyle = c.dataset.s;
+  });
+});
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadFile(f);
+});
+dz.addEventListener('click', e => {
+  if (!e.target.classList.contains('btn-browse')) document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+function loadFile(f) {
+  if (f.size > 10 * 1024 * 1024) { showErr('파일이 10MB를 초과합니다.'); return; }
+  imgMime = f.type || 'image/jpeg';
+  const r = new FileReader();
+  r.onload = e => {
+    imgB64 = e.target.result.split(',')[1];
+    dz.style.display = 'none';
+    const img = document.getElementById('preview-img');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('convert-btn').disabled = false;
+    hideErr();
+  };
+  r.readAsDataURL(f);
+}
+
+function showStatus(t, p) {
+  const b = document.getElementById('status-box'); b.classList.add('on');
+  document.getElementById('status-text').textContent = t;
+  if (p !== undefined) document.getElementById('prog').style.width = p + '%';
+  hideErr();
+}
+function hideStatus() { document.getElementById('status-box').classList.remove('on'); }
+function showErr(m) {
+  const b = document.getElementById('error-box'); b.classList.add('on');
+  document.getElementById('error-text').textContent = m;
+  hideStatus();
+}
+function hideErr() { document.getElementById('error-box').classList.remove('on'); }
+
+async function convert() {
+  const apiKey = document.getElementById('api-key').value.trim();
+  if (!apiKey) { showErr('Gemini API 키를 입력해주세요. 위 안내를 따라 무료로 발급받을 수 있어요.'); return; }
+  if (!imgB64) { showErr('이미지를 먼저 업로드해주세요.'); return; }
+
+  const btn = document.getElementById('convert-btn');
+  btn.disabled = true;
+  document.getElementById('dl-btn').classList.remove('on');
+  document.getElementById('result-img').style.display = 'none';
+  document.getElementById('result-empty').style.display = 'flex';
+  hideErr();
+
+  try {
+    showStatus('Gemini AI에 요청 중...', 20);
+
+    const prompt = STYLE_PROMPTS[selectedStyle];
+
+    const body = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: imgMime, data: imgB64 } }
+        ]
+      }],
+      generationConfig: {
+        responseModalities: ["Text", "Image"]
+      }
+    };
+
+    showStatus('Gemini가 웹툰으로 그리는 중... ✏️', 40);
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    );
+
+    showStatus('결과 처리 중...', 80);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 400) throw new Error('요청 오류입니다. 이미지 형식을 확인해주세요.');
+      if (res.status === 403 || res.status === 401) throw new Error('API 키가 올바르지 않습니다. 키를 확인해주세요.');
+      if (res.status === 429) throw new Error('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+      throw new Error(err?.error?.message || `오류 발생 (${res.status})`);
+    }
+
+    const data = await res.json();
+
+    // 이미지 파트 찾기
+    let imgData = null;
+    let imgMimeResult = 'image/png';
+
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    for (const part of parts) {
+      if (part.inline_data) {
+        imgData = part.inline_data.data;
+        imgMimeResult = part.inline_data.mime_type || 'image/png';
+        break;
+      }
+    }
+
+    if (!imgData) {
+      // 텍스트 응답 확인
+      const textPart = parts.find(p => p.text);
+      if (textPart) throw new Error('이미지 생성에 실패했습니다: ' + textPart.text);
+      throw new Error('결과 이미지를 받지 못했습니다. 다시 시도해주세요.');
+    }
+
+    showStatus('완성! 🎉', 100);
+
+    const dataUrl = `data:${imgMimeResult};base64,${imgData}`;
+    const resultImg = document.getElementById('result-img');
+    resultImg.src = dataUrl;
+    resultImg.style.display = 'block';
+    document.getElementById('result-empty').style.display = 'none';
+
+    // 다운로드 버튼
+    const dl = document.getElementById('dl-btn');
+    dl.href = dataUrl;
+    dl.classList.add('on');
+
+    setTimeout(hideStatus, 1500);
+
+  } catch(e) {
+    showErr(e.message || '알 수 없는 오류가 발생했습니다. 다시 시도해주세요.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
